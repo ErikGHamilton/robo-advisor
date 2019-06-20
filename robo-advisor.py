@@ -1,5 +1,6 @@
 import csv
 import json
+import statistics
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -34,7 +35,7 @@ def organize_response(parsed_response):
     return(return_rows)
 
 def write_csv_function(wrows, stockdate):  #what do i need to input?
-    writingcsv = "data/" + stockdate
+    writingcsv = "data/" + stockdate        #TODO turn to os
     write_csv_file_path = writingcsv
     with open(write_csv_file_path, "w") as csv_file: # "w" means "open the file for writing"
         writer = csv.DictWriter(csv_file, fieldnames=["Day", "Open", "High", "Low", "Close", "Volume"])
@@ -65,6 +66,33 @@ def request_data(stock_choice):
     parsed_response = json.loads(response.text)  
     return(parsed_response)
 
+def get_reco(recorows, recenthigh):
+    avgclose = []
+    for r in recorows:
+        avgclose.append(r["Close"])
+    avgclose = statistics.mean(avgclose)
+
+    if recorows[0]["Close"] > recorows[10]["Close"]:
+        percent_increase = 100 * ((recorows[0]["Close"] - recorows[10]["Close"]) / recorows[10]["Close"])
+        percent_increase = round(percent_increase,2)
+        #print(percent_increase)
+    else:
+        percent_increase = 0
+
+    if recorows[0]["Close"] < recenthigh:
+        percent_frommax = -100 * ((recorows[0]["Close"] - recenthigh) / recenthigh)
+        percent_frommax = round(percent_frommax,2)
+        #print(percent_frommax)
+    else:
+        percent_frommax = 0
+    
+    reco_list = [avgclose, percent_increase, percent_frommax]
+    return(reco_list)
+
+
+
+
+
 
 # BEGIN USER INTERFACE
 
@@ -77,10 +105,11 @@ print("Please Input a Stock You Would Like To Analyze")
 stock_choice = input()
 check_input(stock_choice) #send to stock checker
 parsed_response = request_data(stock_choice)
-rows = organize_response(parsed_response)
+rows = organize_response(parsed_response)  #The organized rows
+
 meta_data = parsed_response['Meta Data']
 stockdate = stock_choice + today
-write_csv_function(rows,stockdate)
+write_csv_function(rows,stockdate)  #Sends to go be written by the csv writer
 
 recentlow = []
 recenthigh = []
@@ -93,17 +122,36 @@ recenthigh = max(recenthigh)
 print("You chose " + stock_choice.upper() + "! Excellent Choice! Well Done. Top Marks")
 print("")
 print("This program was run on " + today + "at " + hour)
-print("The Data was last refreshed at " + meta_data['3. Last Refreshed'])
+print("- The Stock Data was last refreshed at " + meta_data['3. Last Refreshed'] + " -")
 print("")
 
-print("Here Are The Stats for " + stock_choice.upper() + "!")
+print("Here Are The Stats for " + stock_choice.upper() + ":")
 print("Recent Close: " + str(rows[0]['Close']))     #TODO - Transform to USD
 print("Recent High: " + str(recenthigh))
 print("Recent Low: " + str(recentlow))
 
 print("------------------------------------------------------------------")
-print("Your Robo Advisor Recommendation Is To: ")
-print("") # COME UP WITH CRITERIA
+print("Your Robo Advisor Recommendation Is To:... ")
+reco_list = get_reco(rows, recenthigh)
+if rows[0]["Close"] < reco_list[0] or "0" in reco_list:
+    print("Do Not Buy")
+    recommendation = "DontBuy"
+else:
+    print("BUY BUY BUY BUY BUY")
+    recommendation = "Buy"
+
+print("") 
 print("------------------------------------------------------------------")
-print("Your Robo Advisor Recommends This Because: ")
-print("") # COME UP WITH CRITERIA - Maybe it is below recent high/averages but is increasing over last 10 days?
+if recommendation == "Buy":
+    print("Your Robo Advisor Recommends This Because: ")
+    print("The Current Closing Price of " + str(rows[0]["Close"]) + "Above The Recent Average of " + str(reco_list[0]))
+    print("But Is Below The Recent High of " + str(recenthigh) + " By " + str(reco_list[2]) + "%")
+    print("And Has Shown Strong Bullish Behavior Lately By Increasing " + str(reco_list[1]) + "% In The Past 10 Days")
+    print("")
+    print("Given That The Stock Is Discounted From It's Recent Highs But Is Increasing In Price")
+    print("Your Friendly Robo Advisor Recommends That You BUY")
+else:
+    print("Your Robo Advisor Recommends This Because The Stock Does Not Meet Our")
+    print("Criteria of a Discounted Stock Showing Recent Bullish Behavior")
+print("") 
+print("------------------------------------------------------------------")
