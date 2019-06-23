@@ -1,6 +1,7 @@
 import csv
 import json
 import statistics
+import pandas
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -10,13 +11,11 @@ load_dotenv()
 
 API_KEY = os.environ.get("ALPHAVANTAGE_API_KEY", "demo")
 
-company_list_csv = os.path.join(os.path.dirname(__file__), "..", "data", "companylist.csv")
+company_list_csv = os.path.join(os.path.dirname(__file__), "data", "companylist.csv")
+#company_list_csv = "data/companylist.csv"
 
 today = datetime.now().strftime('%Y-%m-%d')   #https://stackoverflow.com/questions/415511/how-to-get-the-current-time-in-python
 hour = datetime.now().strftime('%H:%M')
-
-#now = datetime.datetime.now
-#today = str(now.year) + "-" + str(now.month) + "-" + str(now.day)
 
 
 def organize_response(parsed_response):
@@ -36,11 +35,11 @@ def organize_response(parsed_response):
     #print(return_rows)
     return(return_rows)
 
-def write_csv_function(wrows, stockdate):  #what do i need to input?
-    writingcsv = "data/" + stockdate        #TODO turn to os
-    write_csv_file_path = writingcsv
-    #stockdate = stockdate + ".csv"
-    #write_csv_file_path = os.path.join(os.path.dirname(__file__), "..", "data", stockdate)
+def write_csv_function(wrows, stockdate):  
+    #writingcsv = "data/" + stockdate        #TODO turn to os - for some reason it is not working...
+    #write_csv_file_path = writingcsv
+    stockdate = stockdate + ".csv"
+    write_csv_file_path = os.path.join(os.path.dirname(__file__), "data", stockdate)
     #write_csv_file_path = os.path.join(os.path.dirname(__file__), "..", "data", "stockdata.csv")
     with open(write_csv_file_path, "w") as csv_file: # "w" means "open the file for writing"
         writer = csv.DictWriter(csv_file, fieldnames=["Day", "Open", "High", "Low", "Close", "Volume"])
@@ -48,7 +47,7 @@ def write_csv_function(wrows, stockdate):  #what do i need to input?
         for w in wrows:
             writer.writerow({"Day": w["Day"], "Open": w["Open"], "High": w["High"], "Low": w["Low"], "Close": w["Close"], "Volume": w["Volume"]})
 
-def check_input(stock_choice):    #STILL NEEDS CHARACTER NUMBER CHECKER - update 6/23 - using the company list csv
+def check_input(stock_choice):    #STILL NEEDS CHARACTER NUMBER CHECKER - update 6/23 - using the company list csv in check_input2, line 65
     numchar = len(stock_choice)
     #nonum = any(char.isdigit() for char in input)    #TODO MAKE THIS WORK
     nonum = "False"
@@ -66,12 +65,12 @@ def check_input(stock_choice):    #STILL NEEDS CHARACTER NUMBER CHECKER - update
 def check_input2(stock_choice): 
     df = pandas.read_csv(company_list_csv)
     companies = df.to_dict("records")
-    symbols = [r['Symbols'] for r in companies]
+    symbols = [r['Symbol'] for r in companies]
     stock_choice = stock_choice.upper()
-    if stock_choice in companies
+    if stock_choice in symbols:
         return("Pass")
     else:
-        print("Invalid Stock Ticker Detected, Please Try Again Later")
+        print("Invalid Stock Ticker Detected, Please Try Again Later with a NASDAQ Stock")
         exit()
 
 def request_data(stock_choice):
@@ -135,8 +134,12 @@ for r in rows:
 recentlow = min(recentlow)
 recenthigh = max(recenthigh)
 
+print("")
+print("")
+print("")
 print("You chose " + stock_choice.upper() + "! Excellent Choice! Well Done. Top Marks")
 print("")
+
 print("This program was run on " + today + " at " + hour)
 print("- The Stock Data was last refreshed on " + meta_data['3. Last Refreshed'] + " -")
 print("")
