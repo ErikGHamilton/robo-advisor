@@ -10,6 +10,8 @@ load_dotenv()
 
 API_KEY = os.environ.get("ALPHAVANTAGE_API_KEY", "demo")
 
+company_list_csv = os.path.join(os.path.dirname(__file__), "..", "data", "companylist.csv")
+
 today = datetime.now().strftime('%Y-%m-%d')   #https://stackoverflow.com/questions/415511/how-to-get-the-current-time-in-python
 hour = datetime.now().strftime('%H:%M')
 
@@ -37,13 +39,16 @@ def organize_response(parsed_response):
 def write_csv_function(wrows, stockdate):  #what do i need to input?
     writingcsv = "data/" + stockdate        #TODO turn to os
     write_csv_file_path = writingcsv
+    #stockdate = stockdate + ".csv"
+    #write_csv_file_path = os.path.join(os.path.dirname(__file__), "..", "data", stockdate)
+    #write_csv_file_path = os.path.join(os.path.dirname(__file__), "..", "data", "stockdata.csv")
     with open(write_csv_file_path, "w") as csv_file: # "w" means "open the file for writing"
         writer = csv.DictWriter(csv_file, fieldnames=["Day", "Open", "High", "Low", "Close", "Volume"])
         writer.writeheader() # uses fieldnames set above
         for w in wrows:
             writer.writerow({"Day": w["Day"], "Open": w["Open"], "High": w["High"], "Low": w["Low"], "Close": w["Close"], "Volume": w["Volume"]})
 
-def check_input(stock_choice):    #STILL NEEDS CHARACTER NUMBER CHECKER
+def check_input(stock_choice):    #STILL NEEDS CHARACTER NUMBER CHECKER - update 6/23 - using the company list csv
     numchar = len(stock_choice)
     #nonum = any(char.isdigit() for char in input)    #TODO MAKE THIS WORK
     nonum = "False"
@@ -58,6 +63,17 @@ def check_input(stock_choice):    #STILL NEEDS CHARACTER NUMBER CHECKER
     else:
         return("Pass")
     
+def check_input2(stock_choice): 
+    df = pandas.read_csv(company_list_csv)
+    companies = df.to_dict("records")
+    symbols = [r['Symbols'] for r in companies]
+    stock_choice = stock_choice.upper()
+    if stock_choice in companies
+        return("Pass")
+    else:
+        print("Invalid Stock Ticker Detected, Please Try Again Later")
+        exit()
+
 def request_data(stock_choice):
     request_url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={stock_choice}&apikey={API_KEY}"
     #request_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo"
@@ -103,7 +119,7 @@ print("")
 print("Please Input a Stock You Would Like To Analyze")
 
 stock_choice = input()
-check_input(stock_choice) #send to stock checker
+check_input2(stock_choice) #send to stock checker
 parsed_response = request_data(stock_choice)
 rows = organize_response(parsed_response)  #The organized rows
 
@@ -121,14 +137,15 @@ recenthigh = max(recenthigh)
 
 print("You chose " + stock_choice.upper() + "! Excellent Choice! Well Done. Top Marks")
 print("")
-print("This program was run on " + today + "at " + hour)
-print("- The Stock Data was last refreshed at " + meta_data['3. Last Refreshed'] + " -")
+print("This program was run on " + today + " at " + hour)
+print("- The Stock Data was last refreshed on " + meta_data['3. Last Refreshed'] + " -")
 print("")
 
 print("Here Are The Stats for " + stock_choice.upper() + ":")
-print("Recent Close: " + str(rows[0]['Close']))     #TODO - Transform to USD
-print("Recent High: " + str(recenthigh))
-print("Recent Low: " + str(recentlow))
+print("")
+print("Recent Close: $" + str(rows[0]['Close']))     #TODO - Transform to USD
+print("Recent High: $" + str(recenthigh))
+print("Recent Low: $" + str(recentlow))
 
 print("------------------------------------------------------------------")
 print("Your Robo Advisor Recommendation Is To:... ")
@@ -144,8 +161,8 @@ print("")
 print("------------------------------------------------------------------")
 if recommendation == "Buy":
     print("Your Robo Advisor Recommends This Because: ")
-    print("The Current Closing Price of " + str(rows[0]["Close"]) + "Above The Recent Average of " + str(reco_list[0]))
-    print("But Is Below The Recent High of " + str(recenthigh) + " By " + str(reco_list[2]) + "%")
+    print("The Current Closing Price of $" + str(rows[0]["Close"]) + " Is Above The Recent Average of $" + str(round(reco_list[0],2)))
+    print("But Is Below The Recent High of $" + str(recenthigh) + " By " + str(reco_list[2]) + "%")
     print("And Has Shown Strong Bullish Behavior Lately By Increasing " + str(reco_list[1]) + "% In The Past 10 Days")
     print("")
     print("Given That The Stock Is Discounted From It's Recent Highs But Is Increasing In Price")
